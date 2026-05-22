@@ -1,56 +1,242 @@
-# NexSmart Gateway
+# NexSmartGateway
 
-API Gateway robusto y centralizado construido con **.NET 10** y **YARP (Yet Another Reverse Proxy)**. Actúa como el punto de entrada único para todo el ecosistema de microservicios NexSmart, gestionando el enrutamiento, la resiliencia y la documentación unificada.
+**API Gateway** - Puerta de entrada centralizada para acceder a todos los microservicios de NexSmart.
 
-## Descripción
-Este servicio es la puerta de enlace que orquesta el tráfico hacia los distintos microservicios. Implementa políticas de reintento, cortocircuitos (Circuit Breaker) y ofrece un hub de documentación interactivo para todos los desarrolladores.
+## ¿Qué es una API Gateway?
 
-## Tecnologías Utilizadas
-- **Runtime**: .NET 10
-- **Reverse Proxy**: YARP
-- **Documentación**: Scalar (OpenAPI)
-- **Resiliencia**: Polly
-- **Caching**: Output Cache nativo de .NET
+Una API Gateway es un servidor que actúa como intermediario entre los clientes (aplicaciones frontend, móviles, etc.) y los microservicios internos de una arquitectura. En lugar de que las aplicaciones se comuniquen directamente con cada microservicio, todas las peticiones pasan primero por la API Gateway.
 
-## Instalación / Despliegue
+### Beneficios de usar una API Gateway:
 
-### Requisitos
-- Docker y Docker Compose
-- Red compartida `nexsmart_shared_network` levantada (ver `NexSmartCENTRAL`)
+- **Punto de entrada único**: Una sola URL para acceder a todos los microservicios
+- **Enrutamiento inteligente**: Dirige automáticamente cada petición al microservicio correcto
+- **Autenticación centralizada**: Valida credenciales una sola vez
+- **Rate limiting y seguridad**: Protege los microservicios de accesos no autorizados
+- **Abstracción**: Los clientes no necesitan conocer dónde están los microservicios
 
-### Pasos de Despliegue
-1. **Construir la imagen**:
-   ```bash
-   docker build -t nexsmart-gateway:latest -f deploy/Dockerfile .
-   ```
-2. **Levantar el servicio**:
-   ```bash
-   cd deploy/
-   docker-compose up -d
-   ```
+---
 
-## Uso
-Una vez iniciado, el Gateway está disponible en el puerto configurado (ej. `http://localhost:80`).
-- **Hub de Documentación**: Accede a `/` para ver la interfaz de Scalar con todos los microservicios mapeados.
-- **Rutas de API**: Las peticiones son redirigidas según el prefijo:
-  - `/docs/usuarios/*` -> Identidad y Usuarios
-  - `/docs/catalogo/*` -> Catálogo de Productos
-  - `/docs/promociones/*` -> Hub de Promociones
-  - ...y así sucesivamente.
+## Acceso a Microservicios: Comparativa
 
-## Dependencias con otros servicios
-El Gateway es el **consumidor principal** de los servicios:
-- `NexSmartUsuarios`: Para validación de identidad.
-- `NexSmartCatalogo`, `NexSmartPromociones`, `NexSmartEnvios`, `NexSmartOrdenes`, `NexSmartPagos`: Para orquestación de datos.
+### ❌ **Sin API Gateway** (Acceso Directo)
 
-## Arquitectura (Resumen DDD)
-Aunque el Gateway se enfoca en infraestructura, sigue un patrón de **Layered Architecture** simplificado:
-- **API Layer**: Expone los endpoints de documentación y el proxy.
-- **Infrastructure Layer**: Configuraciones de YARP y políticas de Polly.
+Deberías conectarte directamente a cada microservicio:
 
-## Para desarrolladores junior 💡
-Imagina que el sistema NexSmart es un gran restaurante. El **Gateway** es el **recepcionista** (Host). 
-- Los clientes (Frontend/App) solo hablan con él.
-- Él sabe exactamente en qué mesa (microservicio) está cada plato.
-- Si una cocina (servicio) está muy lenta, él avisa y gestiona la espera (Polly/Circuit Breaker).
-- No tienes que saber las direcciones IP de cada microservicio, solo la dirección del Gateway.
+```
+https://ms-usuarios.your-domain.com/api/usuarios
+https://ms-productos.your-domain.com/api/productos
+https://ms-pedidos.your-domain.com/api/pedidos
+```
+
+**Desventajas:**
+- Múltiples URLs a mantener
+- Exposición directa de microservicios
+- Cada servicio maneja su propia autenticación
+- Mayor complejidad en el cliente
+
+---
+
+### ✅ **Con API Gateway** (Recomendado)
+
+A través de **NexSmartGateway**:
+
+```
+https://your-domain.com/api/usuarios
+https://your-domain.com/api/productos
+https://your-domain.com/api/pedidos
+```
+
+**Ventajas:**
+- Una sola URL base: `https://your-domain.com`
+- La API Gateway enruta internamente a los microservicios correspondientes
+- Autenticación centralizada
+- Mayor seguridad y control
+
+---
+
+## Ejemplos de Uso
+
+### 1. **Obtener Lista de Usuarios**
+
+**Endpoint:**
+```
+GET https://your-domain.com/api/usuarios
+```
+
+**Solicitud cURL:**
+```bash
+curl -X GET "https://your-domain.com/api/usuarios" \
+  -H "Content-Type: application/json"
+```
+
+**Respuesta:**
+```json
+{
+  "status": 200,
+  "data": [
+    {
+      "id": 1,
+      "nombre": "Nombre Ejemplo",
+      "email": "ejemplo@your-domain.com"
+    },
+    {
+      "id": 2,
+      "nombre": "Usuario Prueba",
+      "email": "prueba@your-domain.com"
+    }
+  ]
+}
+```
+
+---
+
+### 2. **Obtener Usuarios con Filtros**
+
+**Endpoint:**
+```
+GET https://your-domain.com/api/usuarios?estado=activo
+```
+
+**Solicitud cURL:**
+```bash
+curl -X GET "https://your-domain.com/api/usuarios?estado=activo" \
+  -H "Content-Type: application/json"
+```
+
+---
+
+### 3. **Crear un Nuevo Usuario**
+
+**Endpoint:**
+```
+POST https://your-domain.com/api/usuarios
+```
+
+**Solicitud cURL:**
+```bash
+curl -X POST "https://your-domain.com/api/usuarios" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Nombre Apellido",
+    "email": "usuario@your-domain.com",
+    "telefono": "0000000000"
+  }'
+```
+
+**Respuesta:**
+```json
+{
+  "status": 201,
+  "message": "Usuario creado exitosamente",
+  "data": {
+    "id": 3,
+    "nombre": "Nombre Apellido",
+    "email": "usuario@your-domain.com"
+  }
+}
+```
+
+---
+
+### 4. **Ejemplo en JavaScript/Fetch**
+
+```javascript
+// Obtener usuarios
+fetch('https://your-domain.com/api/usuarios')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+
+// Crear un usuario
+fetch('https://your-domain.com/api/usuarios', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    nombre: 'Nuevo Usuario',
+    email: 'nuevo@your-domain.com'
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));
+```
+
+---
+
+## Documentación Interactiva
+
+Accede a la documentación detallada de los endpoints usando **Scalar**:
+
+- **Microservicio de Usuarios:**
+  - Acceso Directo: https://ms-usuarios.your-domain.com/scalar/v1
+  - A través del Gateway: https://your-domain.com/api/usuarios/docs
+
+---
+
+## Estructura del Proyecto
+
+```
+NexSmartGateway/
+├── Program.cs              # Configuración principal
+├── appsettings.json        # Configuración de microservicios
+├── Controllers/            # Controladores que enrutan solicitudes
+├── Middleware/             # Middlewares de autenticación y logging
+├── Properties/             # Configuración del proyecto
+└── Dockerfile              # Imagen Docker para desplegar
+```
+
+---
+
+## Comenzar Rápidamente
+
+### Requisitos:
+- .NET 8.0 o superior
+- Docker (opcional)
+
+### Instalación Local:
+
+```bash
+# Clonar el repositorio
+git clone https://github.com/AxelCarlin/NexSmartGateway.git
+cd NexSmartGateway
+
+# Restaurar dependencias
+dotnet restore
+
+# Ejecutar el servidor
+dotnet run
+
+# La API estará disponible en: http://localhost:5000
+```
+
+### Usar con Docker:
+
+```bash
+# Construir imagen
+docker build -t nexsmart-gateway .
+
+# Ejecutar contenedor
+docker run -p 5000:80 nexsmart-gateway
+```
+
+---
+
+## Resumen
+
+| Aspecto | Acceso Directo | Con API Gateway |
+|--------|----------------|-----------------|
+| **URL base** | https://ms-usuarios.your-domain.com | https://your-domain.com |
+| **Estructura** | /api/usuarios | /api/usuarios |
+| **Autenticación** | Por microservicio | Centralizada |
+| **Mantenimiento** | Complejo | Simple |
+| **Seguridad** | Menor | Mayor |
+
+**Recomendación:** Siempre usa **NexSmartGateway** para acceder a los microservicios.
+
+---
+
+## Contacto
+
+Para más información sobre los microservicios y su implementación, consulta la documentación específica de cada servicio en su respectiva URL Scalar.
