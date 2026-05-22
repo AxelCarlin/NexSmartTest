@@ -25,6 +25,7 @@ Microservicio responsable de la integración con pasarelas de pago externas y la
 
 ## Uso
 - Procesamiento de cargos a tarjetas.
+- **Gestión de Meses Sin Intereses (MSI)**: Nuevo soporte para planes de pago diferido.
 - Gestión de monederos electrónicos / crédito NexSmart.
 - Conciliación de pagos exitosos o fallidos.
 
@@ -33,7 +34,7 @@ Microservicio responsable de la integración con pasarelas de pago externas y la
 - **Es llamado por**: `NexSmartOrdenes` (durante el proceso de checkout).
 
 ## Arquitectura (DDD)
-- **Domain**: Entidades de `Transaccion`, `MetodoPago` y validadores financieros.
+- **Domain**: Entidades de `Transaccion`, `MetodoPago` y validador de MSI.
 - **Application**: Adaptadores para distintos proveedores de pago.
 - **Infrastructure**: Implementación de SDKs externos (ej. Stripe) y acceso a BD.
 - **Api**: Webhooks para recibir confirmaciones de bancos.

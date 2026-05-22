@@ -27,6 +27,7 @@ El Hub de Promociones permite aplicar lógica dinámica de descuentos sobre las 
 ## Uso
 - Validación de cupones de descuento.
 - Aplicación de reglas "X por Y" (ej. 2x1).
+- **Configuración de MSI**: Definición de plazos de meses sin intereses por monto mínimo.
 - Listado de promociones vigentes.
 
 ## Dependencias con otros servicios
